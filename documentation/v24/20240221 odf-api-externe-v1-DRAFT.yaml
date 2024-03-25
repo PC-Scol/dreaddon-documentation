@@ -1,0 +1,1990 @@
+openapi: 3.0.1
+info:
+  version: "1.0.0-Draft"
+  title: |
+    OffreDeFormation V1
+  description: |
+
+    # Introduction
+
+    ATTENTION : ceci est un document de travail destiné à présenter la liste des API externes du service ODF. 
+    Des modification de l'URL des routes sont susceptibles d'être effectuées.
+
+    Liste l'ensemble des services et des opérations disponibles en externe dans le module OFFRE DE FORMATION
+
+    Description service ODF
+    
+    # Gestion des erreurs
+
+    ## StatusCode
+
+    | Code    | Description                                |
+    |---------|--------------------------------------------|
+    | 200     | Opération effectuée                        |
+    |         | Cas particulier: Dans le cas d'APIs de     |
+    |         | type bulk, un 200 peut aussi être retourné |
+    |         | si des données de la requête sont          |
+    |         | considérées en erreur                      |
+    | 201     | Ressource créée                            |
+    | 400     | Données envoyées par le client invalides   |
+    | 403     | Accès refusé                               |
+    | 404     | Ressource inexistante                      |
+    | 409     | donnée déjà existante                      |
+    | 500     | Erreur technique rencontrée par le serveur |
+
+
+    ## Codes d'erreurs
+    
+    | Code      | Description                                |
+    |-----------|--------------------------------------------|
+    | notNull   | la propriété est obligatoire               |
+    | notBlank  | la propriété ne doit pas être vide         |
+    | size      | la longueur de la propriété est invalide   |
+    | pattern   | les caractères ou la syntaxe de            |
+    |           | la propriété est invalide                  |
+    | genre     | le genre de la personne est invalide       |
+    | dateEntre | la date est invalide                       |
+    | telephone | le téléphone est invalide                  |
+    | email     | le mail est invalide                       |
+
+servers:
+  - url: 'http://localhost:3001/api/odf/v1-draft'
+  - url: 'https://odf.{env}.pc-scol.fr/api/odf/ext/v1'
+    variables:
+      env:
+        default: dev
+        enum: [ dev, test-sxb, po-sxb, test-tls, po-tls, test-nte, po-nte, test-gnb, po-gnb ]
+
+tags:
+  - name: objets-maquette-externe
+    description: |
+      Cet endpoint gère :
+      *  les objets maquettes
+  - name: maquettes-externe
+    description: |
+      Cet endpoint gère :
+      * les maquettes de formations
+  - name: espaces-externe
+    description: |
+      Cet endpoint gère :
+      * les espaces de travail
+  - name: diplomes-externe
+    description: >-
+      Cet endpoint gère :
+      * les diplomes
+paths:
+
+  '/etablissements/{codeStructure}/objets-maquette':
+    get:
+      tags:
+        - objets-maquette-externe
+      summary: Rechercher des objets maquette
+      operationId: rechercherObjetMaquette
+      description: |
+        Rechercher des objets maquette
+      security:
+        - idTokenAuth: [ ]
+      parameters:
+        - $ref: "#/components/parameters/Structure"
+        - $ref: "#/components/parameters/Pageable"
+        - in: query
+          name: r
+          description: |
+            Critères de recherche (contient).
+            
+            Ce critère sera utilisé pour retourner des espace dont le code ou le libellé contiennent cette valeur.
+          schema:
+            type: string
+        - in: query
+          name: espace
+          description: |
+            Identifiant d'espace contenant les objets recherchés
+          schema:
+            type: string
+        - in: query
+          name: typeObjetMaquette
+          description: |
+            Types de l'objet maquette
+            Doit correspondre à la liste définie par TypeObjetMaquette
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/TypeObjetMaquette'
+        - in: query
+          name: racine
+          required: false
+          schema:
+            type: boolean
+        - in: query
+          name: typeObjetFormation
+          required: false
+          description: |
+            Type de l'objet formation
+            Doit correspondre à la nomenclature TypeObjetFormation
+          example: ANNEE
+          schema:
+            type: string
+        - in: query
+          name: ids
+          required: false
+          description: |
+            Liste d'identifiant objet maquette ramène les objets maquettes
+          schema:
+            type: array
+            items:
+              type: string
+              format: UUID
+        - in: query
+          name: piaSeulement
+          required: false
+          schema:
+            type: boolean
+        - in: query
+          name: piaActif
+          required: false
+          schema:
+            type: boolean
+        - in: query
+          name: valideSeulement
+          description: Permet de ne remonter que les objets valides
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Liste d'objets maquette correspondant aux critères de recherche
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedObjetMaquetteSummaries'
+        default:
+          description: Erreur
+          content:
+            'json/application':
+              schema:
+                $ref: '#/components/schemas/Erreurs'
+
+  '/etablissements/{codeStructure}/objets-maquette/{id}':
+    get:
+      tags:
+        - objets-maquette-externe
+      summary: Lire objet maquette
+      operationId: lireObjetMaquette
+      security:
+        - idTokenAuth: [ ]
+      parameters:
+        - $ref: "#/components/parameters/Structure"
+        - $ref: "#/components/parameters/Id"
+      responses:
+        '200':
+          description: L'objet maquette
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjetMaquetteDetail'
+          headers:
+            schema:
+              $ref: "#/components/headers/Etag"
+        '404':
+          description: L'objet maquette n'existe pas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+        default:
+          description: Erreur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreurs'
+
+  '/etablissement/{codeStructure}/maquettes/{id}':
+    get:
+      tags:
+        - maquettes-externe
+      summary: Lecture de la structure d'une maquette
+      operationId: lireStructureMaquette
+      description: |
+        Lecture de la structure de la maquette
+      security:
+        - idTokenAuth: [ ]
+      parameters:
+        - $ref: "#/components/parameters/Structure"
+        - $ref: "#/components/parameters/Id"
+          description: Identifiant de l'objet maquette racine
+      responses:
+        200:
+          description: La structure de la maquette
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/MaquetteStructure'
+        404:
+          description: La maquette n'existe pas
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Erreur'
+        default:
+          description: Erreur
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Erreurs'
+
+  '/etablissements/{codeStructure}/espaces':
+
+    get:
+      tags:
+        - espaces-externe
+      summary: Lire les espaces
+      operationId: rechercherEspaces
+      description: |
+        Lecture des espaces
+      security:
+        - idTokenAuth: [ ]
+      parameters:
+        - $ref: "#/components/parameters/Structure"
+        - $ref: "#/components/parameters/Pageable"
+        - in: query
+          name: r
+          description: |
+            Critères de recherche (contient).
+            
+            Ce critère sera utilisé pour retourner des espace dont le code ou le libellé contiennent cette valeur.
+          schema:
+            type: string
+        - in: query
+          name: type
+          schema:
+            $ref: '#/components/schemas/TypeEspace'
+        - in: query
+          name: actif
+          schema:
+            type: boolean
+      responses:
+        200:
+          description: Liste des espaces correspondant aux critères de recherche
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/PagedEspaces'
+        default:
+          description: Erreur
+          content:
+            'json/application':
+              schema:
+                $ref: '#/components/schemas/Erreurs'
+
+  '/etablissements/{codeStructure}/espaces/{id}':
+    get:
+      tags:
+        - espaces-externe
+      summary: Lire un espace
+      operationId: lireEspace
+      description: |
+        Lecture d'un espace
+      security:
+        - idTokenAuth: [ ]
+      parameters:
+        - $ref: "#/components/parameters/Structure"
+        - $ref: "#/components/parameters/Id"
+      responses:
+        200:
+          description: Liste des espaces correspondant aux critères de recherche
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Espace'
+        404:
+          description: Espace inexistant
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Erreurs'
+        default:
+          description: Erreur
+          content:
+            'json/application':
+              schema:
+                $ref: '#/components/schemas/Erreurs'
+
+  '/etablissements/{codeStructure}/maquettes/{id}/exporter':
+    get:
+      tags:
+        - maquettes-externe
+      summary: (Non rétrocompatible) Exporter une maquette au format base 64
+      operationId: exporter
+      description: |
+        Permet d'exporter une maquette au format base 64.
+        Dans l'objectif de pouvoir la réimporter dans un autre espace de travail.
+      security:
+        - idTokenAuth: [ ]
+      parameters:
+        - $ref: "#/components/parameters/Structure"
+        - $ref: "#/components/parameters/Id"
+      responses:
+        200:
+          description: La maquette exportée au format base 64
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/ExporterResponse'
+        default:
+          description: Erreur
+          content:
+            'json/application':
+              schema:
+                $ref: '#/components/schemas/Erreurs'
+
+  '/etablissements/{codeStructure}/diplomes/':
+    get:
+      tags:
+        - diplomes-externe
+      summary: Lire les diplômes
+      operationId: rechercherDiplomes
+      description: |
+        Lecture des diplômes
+      security:
+        - idTokenAuth: [ ]
+      parameters:
+        - $ref: "#/components/parameters/Structure"
+        - $ref: "#/components/parameters/Pageable"
+        - in: query
+          name: r
+          description: |
+            Critères de recherche (contient).
+
+            Ce critère sera utilisé pour retourner des diplômes dont le code ou le libellé contiennent cette valeur.
+          schema:
+            type: string
+        - in: query
+          name: finaliteDiplome
+          schema:
+            type: string
+      responses:
+        200:
+          description: Liste des diplômes correspondant aux critères de recherche
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/PagedDiplomeSummaries'
+        default:
+          description: Erreur
+          content:
+            'json/application':
+              schema:
+                $ref: '#/components/schemas/Erreurs'
+
+  '/etablissements/{codeStructure}/diplomes/{id}':
+    get:
+      tags:
+        - diplomes-externe
+      summary: Lire un diplôme
+      operationId: lireDiplome
+      description: |
+        Lecture d'un diplôme
+      security:
+        - idTokenAuth: [ ]
+      parameters:
+        - $ref: "#/components/parameters/Structure"
+        - $ref: "#/components/parameters/Id"
+      responses:
+        200:
+          description: Diplôme correspondant aux critères de recherche
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Diplome'
+        404:
+          description: Diplome inexistant
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Erreurs'
+        default:
+          description: Erreur
+          content:
+            'json/application':
+              schema:
+                $ref: '#/components/schemas/Erreurs'
+
+  '/etablissements/{codeStructure}/diplomes/{id}/points-inscription-administrative':
+    get:
+      tags:
+        - diplomes-externe
+      summary: Lire les points d'inscription administrative associés à un Diplome
+      operationId: lirePointsInscriptionAdministrativeDiplome
+      description: |
+        Lecture des points d'inscription administrative associés à un Diplome
+      security:
+        - idTokenAuth: [ ]
+      parameters:
+        - $ref: "#/components/parameters/Structure"
+        - $ref: "#/components/parameters/Id"
+      responses:
+        200:
+          description: Points d'inscription administrative correspondant aux critères de recherche
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/ObjetMaquetteSummaries'
+        404:
+          description: Points d'inscription administrative inexistant
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Erreurs'
+        default:
+          description: Erreur
+          content:
+            'json/application':
+              schema:
+                $ref: '#/components/schemas/Erreurs'
+
+components:
+
+  securitySchemes:
+    # Authorization: Bearer id.token.
+    idTokenAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Un ID token JWT généré par le serveur CAS de Pegase doit être utilisé lors de tout appel aux services COF.
+        
+               L'ID Token doit être transmis dans le Header HTTP Authorization sous la forme 'Bearer ' (avec étant la valeur de l'id token).
+        
+               TODO: quelle est la procédure pour générer cet ID Token ?
+
+  parameters:
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      schema:
+        type: string
+      description: ETag de la ressource actuelle
+    Structure:
+      name: codeStructure
+      in: path
+      required: true
+      schema:
+        type: string
+        example: ETAB00
+      description: Le code de l'établissement
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Identifiant d'une ressource
+    Ids:
+      name: ids
+      in: path
+      required: true
+      schema:
+        type: array
+        items:
+          type: string
+          format: uuid
+      description: Liste des identifiants d'une ressource
+    ContexteId:
+      name: contexteId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Identifiant du contexte à valider. Ce contexte doit correspondre à un point d'inscription administrative (PIA)
+    DiplomeId:
+      name: diplomeId
+      required: true
+      in: path
+      schema:
+        type: string
+        format: uuid
+        description: Identifiant du diplôme
+    Pageable:
+      name: pageable
+      in: query
+      required: false
+      style: form
+      explode: true
+      schema:
+        $ref: "#/components/schemas/Pageable"
+
+  headers:
+    Etag:
+      description: |
+        The RFC7232 ETag header field in a response provides the current entity-
+        tag for the selected resource. An entity-tag is an opaque identifier for
+        different versions of a resource over time, regardless whether multiple
+        versions are valid at the same time. An entity-tag consists of an opaque
+        quoted string, possibly prefixed by a weakness indicator.
+      example: W/"xy", "5", "7da7a728-f910-11e6-942a-68f728c1ba70"
+      required: false
+      schema:
+        type: string
+
+  schemas:
+
+    Ects:
+      type: number
+      format: double
+      minimum: 0
+      maximum: 10000
+      exclusiveMaximum: true
+      description: |
+        Crédits ECTS (European Credits Transfer System)
+
+        Permet d'estimer le temps d'une formation.
+
+        Le crédit ECTS est proportionnel au volume de travail à fournir par l’apprenant
+        et permet de mesurer le niveau d’études atteint.
+
+        Règles de gestion:
+        * partie entière de 4 chiffres max, décimale de 2 chiffres max
+
+    DescripteursObjetMaquette:
+      description: Descripteurs communs des objets maquette
+      discriminator:
+        propertyName: typeObjetMaquette
+        mapping:
+          FORMATION: "#/components/schemas/DescripteursFormation"
+          OBJET-FORMATION: "#/components/schemas/DescripteursObjetFormation"
+          GROUPEMENT: "#/components/schemas/DescripteursGroupement"
+      type: object
+      required:
+        - libelle
+        - libelleLong
+      properties:
+        libelle:
+          type: string
+        libelleLong:
+          type: string
+
+    DescripteursObjetMaquetteRequest:
+      description: Descripteurs communs des objets maquette
+      discriminator:
+        propertyName: typeObjetMaquette
+        mapping:
+          FORMATION: "#/components/schemas/DescripteursFormationRequest"
+          OBJET-FORMATION: "#/components/schemas/DescripteursObjetFormationRequest"
+          GROUPEMENT: "#/components/schemas/DescripteursGroupementRequest"
+      required:
+        - libelle
+        - libelleLong
+      properties:
+        libelle:
+          type: string
+        libelleLong:
+          type: string
+
+    DescripteursFormation:
+      allOf:
+        - $ref: '#/components/schemas/DescripteursObjetMaquette'
+        - type: "object"
+          properties:
+            type:
+              $ref: '#/components/schemas/Nomenclature'
+              description: |
+                Type de la formation
+
+                Doit correspondre à la nomenclature TypeFormation
+              example: DIPLOMANTE
+            ects:
+              type: number
+              description: Nombre d'ECTS dans le contexte
+            structurePrincipale:
+              type: string
+            teleEnseignement:
+              type: boolean
+
+    DescripteursFormationRequest:
+      allOf:
+        - $ref: '#/components/schemas/DescripteursObjetMaquetteRequest'
+        - type: "object"
+          properties:
+            type:
+              type: string
+              description: |
+                Type de la formation
+
+                Doit correspondre à la nomenclature TypeFormation
+              example: DIPLOMANTE
+            ects:
+              type: number
+              description: Nombre d'ECTS dans le contexte
+            structurePrincipale:
+              type: string
+            teleEnseignement:
+              type: boolean
+
+    DescripteursObjetFormation:
+      allOf:
+        - $ref: '#/components/schemas/DescripteursObjetMaquette'
+        - type: "object"
+          properties:
+            ects:
+              type: number
+              description: Nombre d'ECTS dans le contexte
+            nature:
+              $ref: '#/components/schemas/Nomenclature'
+              description: |
+                Nature dans le contexte
+
+                Doit correspondre à la nomenclature NatureTypeObjetFormation
+            type:
+              $ref: '#/components/schemas/Nomenclature'
+              description: |
+                Type de l'objet formation
+
+                Doit correspondre à la nomenclature TypeObjetFormation
+              example: ANNEE
+            structurePrincipale:
+              type: string
+            stage:
+              type: boolean
+            teleEnseignement:
+              type: boolean
+            capaciteAccueil:
+              type: integer
+
+    DescripteursObjetFormationRequest:
+      allOf:
+        - $ref: '#/components/schemas/DescripteursObjetMaquetteRequest'
+        - type: "object"
+          properties:
+            ects:
+              type: number
+              description: Nombre d'ECTS dans le contexte
+            nature:
+              type: string
+              description: |
+                Nature dans le contexte
+
+                Doit correspondre à la nomenclature NatureTypeObjetFormation
+            type:
+              type: string
+              description: |
+                Type de l'objet formation
+                
+                Doit correspondre à la nomenclature TypeObjetFormation
+              example: ANNEE
+            structurePrincipale:
+              type: string
+            stage:
+              type: boolean
+            teleEnseignement:
+              type: boolean
+            capaciteAccueil:
+              type: integer
+
+    DescripteursGroupement:
+      allOf:
+        - $ref: '#/components/schemas/DescripteursObjetMaquette'
+        - type: "object"
+          properties:
+            plageDeChoix:
+              $ref: '#/components/schemas/PlageDeChoix'
+            natureGroupement:
+              $ref: '#/components/schemas/Nomenclature'
+              description: |
+                Nature dans le contexte
+
+                Doit correspondre à la nomenclature NatureGroupement  
+
+    DescripteursGroupementRequest:
+      allOf:
+        - $ref: '#/components/schemas/DescripteursObjetMaquetteRequest'
+        - type: "object"
+          properties:
+            plageDeChoix:
+              $ref: '#/components/schemas/PlageDeChoix'
+            natureGroupement:
+              type: string
+              description: |
+                Nature dans le contexte
+                
+                Doit correspondre à la nomenclature NatureGroupement
+
+    DescripteursEnquete:
+      properties:
+        descripteursSise:
+          $ref: '#/components/schemas/DescripteursSise'
+        descripteursAglae:
+          $ref: '#/components/schemas/DescripteursAglae'
+
+    DescripteursEnqueteRequest:
+      properties:
+        descripteursSise:
+          $ref: '#/components/schemas/DescripteursSiseRequest'
+        descripteursAglae:
+          $ref: '#/components/schemas/DescripteursAglae'
+      required:
+        - descripteursSise
+        - descripteursAglae
+          
+
+    DescripteursSise:
+      properties:
+        typeDiplome:
+          $ref: '#/components/schemas/Nomenclature'
+          description: |
+            Doit correspondre à la nomenclature TypeDiplome
+        codeDiplomeSise:
+          $ref: '#/components/schemas/Nomenclature'
+          description: |
+            Doit correspondre à la nomenclature DiplomeSise
+        niveauDiplomeSise:
+          type: string
+        parcoursTypeSise:
+          $ref: '#/components/schemas/Nomenclature'
+          description: |
+            Doit correspondre à la nomenclature ParcoursTypeSise
+        domaineFormation:
+          $ref: '#/components/schemas/Nomenclature'
+          description: |
+            Doit correspondre à la nomenclature DomaineFormation
+        mention:
+          $ref: '#/components/schemas/Nomenclature'
+          description: |
+            Doit correspondre à la nomenclature MentionDiplome
+        champFormation:
+          $ref: '#/components/schemas/Nomenclature'
+          description: |
+            Doit correspondre à la nomenclature ChampFormation
+        niveauDiplome:
+          $ref: '#/components/schemas/Nomenclature'
+          description: |
+            Doit correspondre à la nomenclature NiveauDiplome    
+
+    DescripteursSiseRequest:
+      properties:
+        typeDiplome:
+          type: string
+          description: |
+            Doit correspondre à la nomenclature TypeDiplome
+        codeDiplomeSise:
+          type: string
+          description: |
+            Doit correspondre à la nomenclature DiplomeSise
+        niveauDiplomeSise:
+          type: string
+        parcoursTypeSise:
+          type: string
+          description: |
+            Doit correspondre à la nomenclature ParcoursTypeSise
+        domaineFormation:
+          type: string
+          description: |
+            Doit correspondre à la nomenclature DomaineFormation
+        mention:
+          type : string
+          description: |
+            Doit correspondre à la nomenclature MentionDiplome
+        champFormation:
+          type : string
+          description: |
+            Doit correspondre à la nomenclature ChampFormation
+        niveauDiplome:
+          type : string
+          description: |
+            Doit correspondre à la nomenclature NiveauDiplome
+    
+    DescripteursAglae:
+      properties:
+        habilitePourBoursesAglae:
+          type: boolean
+          description: |
+            Un diplôme habilité national (au titre 'Aglaé') permet aux apprenants inscrits sur ce diplôme à demander une bourse Aglaé.
+            Un diplôme NON national PEUT permettre aux apprenants inscrits sur ce diplôme à demander une bourse Aglaé
+        niveauAglae:
+          type: string
+          nullable: true
+          maxLength: 2
+          pattern: '^[0-9]{2}$'
+          description: |
+            Niveau aglaé dans le diplôme: 2 caractères numériques
+      
+
+    DescripteursSyllabus:
+      discriminator:
+        propertyName: typeObjetMaquette
+        mapping:
+          FORMATION: "#/components/schemas/DescripteursFormationSyllabus"
+          OBJET-FORMATION: "#/components/schemas/DescripteursObjetFormationSyllabus"
+          GROUPEMENT: "#/components/schemas/DescripteursGroupementSyllabus"
+      properties:
+        typeObjetMaquette:
+          $ref: '#/components/schemas/TypeObjetMaquette'
+        description:
+          type: string
+        objectif:
+          type: string
+        ouvertureALaMobiliteEntrante:
+          type: boolean
+        langueEnseignement:
+          type: string
+        prerequisPedagogique:
+          type: string
+        bibliographie:
+          type: string
+        contacts:
+          type: string
+        autresInformations:
+          type: string
+        modalitesEnseignements:
+          type: string
+          description: |
+            Texte libre indiquant les modalités d'enseignement prévisionnelles
+
+    DescripteursObjetFormationSyllabus:
+      allOf:
+        - $ref: '#/components/schemas/DescripteursSyllabus'
+        - type: "object"
+          properties:
+            volumeHoraireParTypeDeCours:
+              type: string
+              description: Volume horaire par type de cours
+            coefficient:
+              type: string
+              description: Coefficient
+            modalitesEvaluation:
+              type: string
+              description: Modalités d'évaluation
+
+    DescripteursGroupementSyllabus:
+      allOf:
+        - $ref: '#/components/schemas/DescripteursSyllabus'
+        - type: "object"
+
+    DescripteursFormationSyllabus:
+      allOf:
+        - $ref: '#/components/schemas/DescripteursSyllabus'
+        - type: "object"
+
+    FormatsEnseignement:
+      properties:
+        structuresPorteuse:
+          type: array
+          items:
+            type: string
+        formationPorteuse:
+          $ref: '#/components/schemas/Id'
+        formatsEnseignement:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormatEnseignement"
+
+    FormatEnseignement:
+      properties:
+        modalite:
+          $ref: '#/components/schemas/Nomenclature'
+          description: |
+            Doit correspondre à la nomenclature ModaliteEnseignement
+        typeHeure:
+          $ref: '#/components/schemas/Nomenclature'
+          description: |
+            Doit correspondre à la nomenclature TypeHeure
+        volumeHoraire:
+          type: number
+        nombreTheoriqueDeGroupes:
+          type: integer
+        seuilDedoublement:
+          type: integer
+
+    FormatsEnseignementRequest:
+      properties:
+        structuresPorteuse:
+          type: array
+          items:
+            type: string
+        formationPorteuse:
+          $ref: '#/components/schemas/Id'
+        formatsEnseignement:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormatEnseignement"
+
+    Enfant:
+      description: Enfant d'un objet
+      properties:
+        id:
+          description: id de l'enfant
+          type: string
+        obligatoire:
+          description: nature du lien entre le père et l'enfant
+          type: boolean
+
+    DescripteursContexte:
+      description: Descripteurs du contexte
+      discriminator:
+        propertyName: typeObjetMaquette
+        mapping:
+          FORMATION: "#/components/schemas/DescripteursFormationContexte"
+          OBJET-FORMATION: "#/components/schemas/DescripteursObjetFormationContexte"
+          GROUPEMENT: "#/components/schemas/DescripteursGroupementContexte"
+      properties:
+        typeObjetMaquette:
+          $ref: '#/components/schemas/TypeObjetMaquette'
+
+    DescripteursContexteRequest:
+      description: Descripteurs du contexte
+      discriminator:
+        propertyName: typeObjetMaquette
+        mapping:
+          FORMATION: "#/components/schemas/DescripteursFormationContexteRequest"
+          OBJET-FORMATION: "#/components/schemas/DescripteursObjetFormationContexteRequest"
+          GROUPEMENT: "#/components/schemas/DescripteursGroupementContexteRequest"
+      properties:
+        typeObjetMaquette:
+          $ref: '#/components/schemas/TypeObjetMaquette'
+
+    DescripteursFormationContexte:
+      allOf:
+        - $ref: '#/components/schemas/DescripteursContexte'
+
+    DescripteursFormationContexteRequest:
+      allOf:
+        - $ref: '#/components/schemas/DescripteursContexteRequest'
+
+    DescripteursObjetFormationContexte:
+      allOf:
+        - $ref: '#/components/schemas/DescripteursContexte'
+        - type: "object"
+          properties:
+            ects:
+              type: number
+              description: Nombre d'ECTS dans le contexte
+            nature:
+              $ref: '#/components/schemas/Nomenclature'
+              description: |
+                Nature dans le contexte
+
+                Doit correspondre à la nomenclature NatureTypeObjetFormation
+
+    DescripteursObjetFormationContexteRequest:
+      allOf:
+        - $ref: '#/components/schemas/DescripteursContexteRequest'
+        - type: "object"
+          properties:
+            ects:
+              type: number
+              description: Nombre d'ECTS dans le contexte
+            nature:
+              type: string
+              description: |
+                Nature dans le contexte
+
+                Doit correspondre à la nomenclature NatureTypeObjetFormation
+
+    DescripteursGroupementContexte:
+      allOf:
+        - $ref: '#/components/schemas/DescripteursContexte'
+        - type: "object"
+          properties:
+            plageDeChoix:
+              $ref: '#/components/schemas/PlageDeChoix'
+            natureGroupement:
+              $ref: '#/components/schemas/Nomenclature'
+              description: |
+                Nature dans le contexte
+
+                Doit correspondre à la nomenclature NatureGroupement
+
+
+    DescripteursGroupementContexteRequest:
+      allOf:
+        - $ref: '#/components/schemas/DescripteursContexteRequest'
+        - type: "object"
+          properties:
+            plageDeChoix:
+              $ref: '#/components/schemas/PlageDeChoix'
+            natureGroupement:
+              type: string
+              description: |
+                Nature dans le contexte
+
+                Doit correspondre à la nomenclature NatureGroupement
+
+    Contexte:
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+          description: UUID du contexte
+        chemin:
+          type: array
+          description: Chemin du contexte
+          items:
+            $ref: '#/components/schemas/Id'
+            description: partie du chemin du contexte
+        valide:
+          type: boolean
+          description: Temoin qui caracterise la validite du contexte
+        pointInscriptionAdministrative:
+          $ref: '#/components/schemas/PointInscriptionAdministrative'
+        descripteursContexte:
+          $ref: '#/components/schemas/DescripteursContexte'
+
+    PointInscriptionAdministrative:
+      properties:
+        actif:
+          type: boolean
+          description: Temoin qui caracterise le fait que le point d'inscription administrative est actif
+
+    ContextesDetails:
+      type: array
+      description: Liste des contextes
+      items:
+        $ref: '#/components/schemas/ContexteDetails'
+
+    ContexteDetails:
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+          description: UUID du contexte
+        chemin:
+          type: array
+          description: Chemin du contexte
+          items:
+            $ref: '#/components/schemas/Id'
+            description: partie du chemin du contexte (uuid des objets)
+        cheminCodes:
+          type: array
+          description: Chemin du contexte
+          items:
+            $ref: '#/components/schemas/Code'
+            description: partie du chemin du contexte (code des objets)
+        valide:
+          type: boolean
+          description: Temoin qui caracterise la validite du contexte
+        inscriptionAdministrative:
+          $ref: '#/components/schemas/PointInscriptionAdministrative'
+        descripteursContexte:
+          $ref: '#/components/schemas/DescripteursContexte'
+
+    ObjetMaquetteDetail:
+      discriminator:
+        propertyName: typeObjetMaquette
+        mapping:
+          FORMATION: "#/components/schemas/Formation"
+          OBJET-FORMATION: "#/components/schemas/ObjetFormation"
+          GROUPEMENT: "#/components/schemas/Groupement"
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        typeObjetMaquette:
+          $ref: '#/components/schemas/TypeObjetMaquette'
+        code:
+          $ref: '#/components/schemas/Code'
+        espace:
+          $ref: '#/components/schemas/Id'
+          description: Identifiant de l'espace
+        mutualise:
+          type: boolean
+          description: Temoin qui caracterise le caractère mutualisé de l'objet
+        enfants:
+          type: array
+          description: les enfants de l'objet
+          items:
+            $ref: '#/components/schemas/Enfant'
+        contextes:
+          type: array
+          description: les contextes de l'objet
+          items:
+            $ref: '#/components/schemas/Contexte'
+        descripteursObjetMaquette:
+          $ref: '#/components/schemas/DescripteursObjetMaquette'
+        descripteursEnquete:
+          $ref: '#/components/schemas/DescripteursEnquete'
+        descripteursSyllabus:
+          $ref: '#/components/schemas/DescripteursSyllabus'
+        formatsEnseignement:
+          $ref: '#/components/schemas/FormatsEnseignement'
+
+    NomenclaturesErreur:
+      properties:
+        nomenclaturesErreur:
+          type: array
+          items:
+            $ref: '#/components/schemas/NomenclatureErreurValidation'
+            type: object
+
+
+
+    Formation:
+      allOf:
+        - $ref: '#/components/schemas/ObjetMaquetteDetail'
+        - type: "object"
+          properties:
+            diplomeId:
+              $ref: '#/components/schemas/Id'
+              description: |
+                Identifiant du diplôme
+
+    ObjetFormation:
+      allOf:
+        - $ref: '#/components/schemas/ObjetMaquetteDetail'
+        - type: "object"
+
+    Groupement:
+      allOf:
+        - $ref: '#/components/schemas/ObjetMaquetteDetail'
+        - type: "object"
+
+    PlageDeChoix:
+      properties:
+        min:
+          type: integer
+          description: Nombre minimum d'éléments à choisir
+          minimum: 0
+        max:
+          type: integer
+          description: Nombre maximum d'éléments à choisir
+          minimum: 0
+
+    MaquetteStructure:
+      required:
+        - racine
+      properties:
+        racine:
+          $ref: '#/components/schemas/ObjetMaquetteStructure'
+
+    ObjetMaquetteStructure:
+      required:
+        - id
+        - classe
+        - code
+        - enfants
+        - pia
+        - valide
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+          description: |
+            Identifiant de l'objet maquette
+        contexteId:
+          $ref: '#/components/schemas/Id'
+          description: |
+            Identifiant du contexte
+        classe:
+          type: string
+          description: |
+            Classe de l'objet maquette (F, OF ou G)
+        type:
+          type: string
+          description: |
+            Type de l'objet maquette si OF (UE, EC, etc.)
+        code:
+          $ref: '#/components/schemas/Code'
+        libelle:
+          $ref: '#/components/schemas/Libelle'
+        pia:
+          $ref: '#/components/schemas/PointInscriptionAdministrative'
+        valide:
+          type: boolean
+          default: false
+          description: |
+            Objet maquette validé
+        enfants:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnfantsStructure'
+
+    EnfantsStructure:
+      required:
+        - id
+        - obligatoire
+        - objetMaquette
+      properties:
+        id:
+          description: id de l'enfant
+          $ref: '#/components/schemas/Id'
+        obligatoire:
+          description: nature du lien entre le père et l'enfant
+          type: boolean
+        objetMaquette:
+          $ref: '#/components/schemas/ObjetMaquetteStructure'
+
+    Periode:
+      required:
+        - validite
+        - active
+        - type
+        - libelleLong
+        - libelleAffichage
+      allOf:
+        - $ref: '#/components/schemas/Espace'
+        - type: object
+          properties:
+            libelleLong:
+              $ref: '#/components/schemas/LibelleLongEspace'
+            libelleAffichage:
+              $ref: '#/components/schemas/LibelleAffichageEspace'
+            validite:
+              $ref: '#/components/schemas/DatesValidation'
+            anneeUniversitaire:
+              type: integer
+              description: Année universitaire
+              example: 2024
+              minimum: 0
+            active:
+              type: boolean
+            type:
+              $ref: '#/components/schemas/Typologie'
+
+    BacASable:
+      required:
+        - dateConsommationNomenclatures
+      allOf:
+        - $ref: '#/components/schemas/Espace'
+        - type: object
+          properties:
+            dateConsommationNomenclatures:
+              type: string
+              format: date
+              description: |
+                Date de consommation des nomenclature pour tous les objets maquette appartenant au bac à sable
+
+    Espaces:
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Espace"
+
+    PagedEspaces:
+      allOf:
+        - $ref: '#/components/schemas/Espaces'
+        - $ref: '#/components/schemas/Paging'
+
+    TypeEspace:
+      type: string
+      enum: [ BAC_A_SABLE, PERIODE ]
+      description: |
+        Type d'un espace
+
+    Espace:
+      discriminator:
+        propertyName: typeEspace
+        mapping:
+          PERIODE: "#/components/schemas/Periode"
+          BAC_A_SABLE: "#/components/schemas/BacASable"
+      required:
+        - id
+        - code
+        - libelle
+        - typeEspace
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        code:
+          $ref: '#/components/schemas/CodeEspace'
+        libelle:
+          $ref: '#/components/schemas/LibelleEspace'
+        typeEspace:
+          $ref: '#/components/schemas/TypeEspace'
+
+    CreerEspaceRequest:
+      discriminator:
+        propertyName: typeEspace
+        mapping:
+          PERIODE: "#/components/schemas/CreerPeriodeRequest"
+          BAC_A_SABLE: "#/components/schemas/CreerBacASableRequest"
+      required:
+        - code
+        - libelle
+        - typeEspace
+      properties:
+        code:
+          $ref: '#/components/schemas/CodeEspace'
+        libelle:
+          $ref: '#/components/schemas/LibelleEspace'
+        typeEspace:
+          $ref: '#/components/schemas/TypeEspace'
+
+    CreerPeriodeRequest:
+      required:
+        - active
+        - validite
+        - libelleLong
+        - libelleAffichage
+      allOf:
+        - $ref: '#/components/schemas/CreerEspaceRequest'
+        - type: object
+          properties:
+            libelleLong:
+              $ref: '#/components/schemas/LibelleLongEspace'
+            libelleAffichage:
+              $ref: '#/components/schemas/LibelleAffichageEspace'
+            validite:
+              $ref: '#/components/schemas/DatesValidation'
+            active:
+              type: boolean
+            anneeUniversitaire:
+              type: integer
+              description: Année universitaire
+              example: 2024
+              minimum: 0
+            type:
+              $ref: '#/components/schemas/Typologie'
+
+    CreerBacASableRequest:
+      required:
+        - dateConsommationNomenclatures
+      allOf:
+        - $ref: '#/components/schemas/CreerEspaceRequest'
+        - type: object
+          properties:
+            dateConsommationNomenclatures:
+              type: string
+              format: date
+              description: |
+                Date de consommation des nomenclature pour tous les objets maquette appartenant au bac à sable
+
+    ImporterExistantVersEspaceRequest:
+      required:
+        - espaceId
+      properties:
+        espaceId:
+          $ref: '#/components/schemas/Id'
+          description: L'identifiant de l'espace de travail cible
+
+    ImporterBase64Request:
+      required:
+        - espaceId
+        - base64Encode
+      properties:
+        espaceId:
+          $ref: '#/components/schemas/Id'
+          description: L'identifiant de l'espace de travail cible
+        base64Encode:
+          type: string
+          description: |
+            La maquette encodée en base64
+        checkNomenclatures:
+          type: boolean
+          description: |
+            Vérification si on veut faire la vérification des nomenclatures
+
+    CopieOptions:
+      required:
+        - objetMaquette
+        - strategie
+      properties:
+        objetMaquette:
+          $ref: '#/components/schemas/Id'
+          description: Identifiant de l'objet maquette sur lequel s'applique cette option de copie
+        strategie:
+          type: string
+          enum: [ LEFT, RIGHT, MERGE ]
+          description: |
+            * LEFT: écrase et remplace les données de l'objet copié dans l'espace cible par celles de l'espace source 
+            * RIGHT: conserve les données de l'objet copié qui existent dans l'espace cible 
+            * MERGE:
+              Conserve les descripteurs non contextuels de l'objet dans l'espace cible. 
+              Ecrase les données contextuelles de l'espace cible par celles de l'objet dans l'espace source. 
+              Si des données contextuelles de l'objet de l'espace cible n'existent pas dans l'objet source alors on conserve
+              ces données de l'objet cible.
+
+    Typologie:
+      type: string
+      enum: [ FORMATION, DIPLOME ]
+      description: |
+        Typologie d'un espace de travail d'une période
+
+    DatesValidation:
+      required:
+        - dateDebut
+        - dateFin
+      properties:
+        dateDebut:
+          type: string
+          format: date
+          description: |
+            Date de début de validation au format yyyy-mm-dd
+        dateFin:
+          type: string
+          format: date
+          description: |
+            Date de fin de la validation au format yyyy-mm-dd
+
+    CreerObjetMaquetteRequest:
+      discriminator:
+        propertyName: typeObjetMaquette
+        mapping:
+          FORMATION: "#/components/schemas/CreerFormationRequest"
+          OBJET-FORMATION: "#/components/schemas/CreerObjetFormationRequest"
+          GROUPEMENT: "#/components/schemas/CreerGroupementRequest"
+      properties:
+        espaceId:
+          $ref: '#/components/schemas/Id'
+          description: UUID de l'espace de travail
+        typeObjetMaquette:
+          $ref: '#/components/schemas/TypeObjetMaquette'
+        code:
+          $ref: '#/components/schemas/Code'
+        mutualise:
+          type: boolean
+        descripteursObjetMaquette:
+          $ref: '#/components/schemas/DescripteursObjetMaquetteRequest'
+
+    CreerFormationRequest:
+      required:
+        - type
+      allOf:
+        - $ref: '#/components/schemas/CreerObjetMaquetteRequest'
+        - type: object
+
+
+    CreerObjetFormationRequest:
+      required:
+        - type
+      allOf:
+        - $ref: '#/components/schemas/CreerObjetMaquetteRequest'
+        - type: object
+
+    CreerGroupementRequest:
+      allOf:
+        - $ref: '#/components/schemas/CreerObjetMaquetteRequest'
+        - type: object
+
+    TypeObjetMaquette:
+      type: string
+      enum: [FORMATION, OBJET-FORMATION, GROUPEMENT]
+      description: |
+        Type d'un objet maquette
+
+    ObjetMaquetteSummary:
+      discriminator:
+        propertyName: typeObjetMaquette
+        mapping:
+          FORMATION: "#/components/schemas/Formation"
+          OBJET-FORMATION: "#/components/schemas/ObjetFormation"
+          GROUPEMENT: "#/components/schemas/Groupement"
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        typeObjetMaquette:
+          $ref: '#/components/schemas/TypeObjetMaquette'
+        typeObjetFormation:
+          type: string
+          description: Type de l'objet formation
+        code:
+          $ref: '#/components/schemas/Code'
+        espaceLibelle:
+          $ref: '#/components/schemas/Libelle'
+          description: Libellé de l'espace de travail contenant l'objet maquette
+        mutualise:
+          type: boolean
+          description: Temoin qui caracterise le caractère mutualisé de l'objet
+        libelle:
+          type: string
+        libelleLong:
+          type: string
+        valideInAnyContexte:
+          type: boolean
+          description: Témoin qui indique si un des contextes de l'objet est validé
+        periodeActive:
+          type: boolean
+          description: Témoin qui indique si la période est active, si applicable au type d'espace
+
+    ObjetMaquetteSummaries:
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ObjetMaquetteSummary"
+
+    PagedObjetMaquetteSummaries:
+      allOf:
+        - $ref: '#/components/schemas/ObjetMaquetteSummaries'
+        - $ref: '#/components/schemas/Paging'
+
+    ObjetMaquetteHistory:
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ObjetMaquetteHistoryItem"
+
+    ObjetMaquetteHistoryItem:
+      discriminator:
+        propertyName: typeObjetMaquette
+        mapping:
+          FORMATION: "#/components/schemas/Formation"
+          OBJET-FORMATION: "#/components/schemas/ObjetFormation"
+          GROUPEMENT: "#/components/schemas/Groupement"
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        typeObjetMaquette:
+          $ref: '#/components/schemas/TypeObjetMaquette'
+        type:
+          type: string
+          description: Type de l'objet maquette (ANNEE', 'SEMESTRE' , 'PARCOURS-TYPE', 'OPTION', 'SPECIALITE' ...)
+        code:
+          $ref: '#/components/schemas/Code'
+        libelle:
+          $ref: '#/components/schemas/Libelle'
+        espaceId:
+          $ref: '#/components/schemas/Id'
+          description: Identifiant de l'espace de travail contenant l'objet maquette
+        espaceLibelle:
+          $ref: '#/components/schemas/Libelle'
+          description: Libellé de l'espace de travail contenant l'objet maquette
+
+    CodeObjetMaquette:
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        code:
+          $ref: '#/components/schemas/Code'
+
+    CodesObjetMaquette:
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CodeObjetMaquette"
+
+    PagedCodesObjetMaquette:
+      allOf:
+        - $ref: '#/components/schemas/CodesObjetMaquette'
+        - $ref: '#/components/schemas/Paging'
+
+    CreerDiplomeRequest:
+      required:
+        - periodeValiditeId
+        - code
+        - intitule
+        - libelleCourt
+      properties:
+        periodesValiditeId:
+          type: array
+          items:
+            $ref: '#/components/schemas/Id'
+            description: Liste UUID des périodes de validité réglementaire
+        finaliteDiplome:
+          type: string
+          description: |
+              Finalité du diplôme
+          
+              Doit correspondre à la nomenclature FinaliteFormation
+        code:
+          type: string
+          description: Code du diplôme
+        intitule:
+          type: string
+          description: Intitulé du diplôme
+        libelleCourt:
+          type: string
+          description: Libellé court du diplôme
+        libelleLong:
+          type: string
+          description: Libellé long du diplôme
+        libelleAffichage:
+          type: string
+          description: Libellé d'afficahge du diplôme
+        diplomeIntermediaire:
+          type: boolean
+          description: Témoin qui indique si le diplôme est un diplôme intermédiaire
+        actif:
+          type: boolean
+          description: Témoin qui caracterise si le diplome est autorisé à être délivrer
+
+
+    ModifierDiplomeRequest:
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        periodesValiditeId:
+          type: array
+          items:
+            $ref: '#/components/schemas/Id'
+            description: Liste UUID des périodes de validité réglementaire
+        finaliteDiplome:
+          type: string
+          description: |
+            Finalité du diplôme
+            
+            Doit correspondre à la nomenclature FinaliteFormation
+        intitule:
+          type: string
+          description: Intitulé du diplôme
+        libelleCourt:
+          type: string
+          description: Libellé court du diplôme
+        libelleLong:
+          type: string
+          description: Libellé long du diplôme
+        libelleAffichage:
+          type: string
+          description: Libellé d'affichage du diplôme
+        diplomeIntermediaire:
+          type: boolean
+          description: Témoin qui indique si le diplôme est un diplôme intermédiaire
+        actif:
+          type: boolean
+          description: Temoin qui caracterise si le diplome est autorisé à être délivrer
+
+
+    Diplomes:
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Diplome"
+
+    Diplome:
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        finaliteDiplome:
+          $ref: '#/components/schemas/Nomenclature'
+          description: |
+            Finalité du diplome
+            
+            Doit correspondre à la nomenclature FinaliteFormation
+        periodesValidite:
+          type: array
+          items:
+            $ref: '#/components/schemas/Id'
+        code:
+          $ref: '#/components/schemas/Code'
+        intitule:
+          type: string
+          description: Intitulé du diplôme
+        libelleCourt:
+          type: string
+          description: Libellé court du diplôme
+        libelleLong:
+          type: string
+          description: Libellé long du diplôme
+        libelleAffichage:
+          type: string
+          description: Libellé d'affichage du diplôme
+        diplomeIntermediaire:
+          type: boolean
+          description: Témoin qui indique si le diplôme est un diplôme intermédiaire
+        actif:
+          type: boolean
+          description: Témoin qui caracterise si le diplome est autorisé à être délivrer
+
+    PagedDiplomeSummaries:
+      allOf:
+        - $ref: '#/components/schemas/DiplomeSummaries'
+        - $ref: '#/components/schemas/Paging'
+
+    DiplomeSummaries:
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiplomeSummary"
+
+    DiplomeSummary:
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        code:
+          $ref: '#/components/schemas/Code'
+        libelle:
+          $ref: '#/components/schemas/Libelle'
+        intitule:
+          type: string
+          description: Intitulé du diplôme
+        finaliteDiplome:
+          type: string
+          description: |
+            Finalité du diplôme
+            
+            Doit correspondre à la nomenclature FinaliteFormation
+        actif:
+          type: boolean
+          description: Le diplôme est-il actif ?
+        periodesValidite:
+          type: array
+          items:
+            $ref: '#/components/schemas/Id'
+
+
+    PeriodeValidite:
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+          description: UUID de la période de validité réglementaire
+        code:
+          type: string
+          description: Code de la période de validité réglementaire
+        libelle:
+          type: string
+          description: Libellé de la période de validité réglementaire
+        validite:
+          $ref: '#/components/schemas/DatesValidation'
+
+
+    # Gestion des erreurs
+    Erreurs:
+      required:
+        - correlationId
+        - timestamp
+        - version
+        - path
+        - statusCode
+        - errors
+      properties:
+        correlationId:
+          type: string
+          description: |
+            Permet d'identifier de manière unique l'erreur côté serveur.
+
+            A titre de debugging.
+        timestamp:
+          type: string
+          format: date-time
+          description: |
+            Timestamp auque à lieu l'erreur.
+
+            A titre de debugging.
+        version:
+          type: string
+          description: |
+            Version de l'application.
+
+            A titre de debugging.
+        path:
+          type: string
+          description: |
+            URI sur lequel le service a été applelé (i.e /api/monservice).
+
+            A titre de debugging.
+        statusCode:
+          type: string
+          description: |
+            Statuscode HTTP.
+
+            A titre de debugging
+        errors:
+          type: array
+          minimum: 1
+          items:
+            $ref: '#/components/schemas/Erreur'
+
+    Erreur:
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: |
+            Code d'erreur.
+
+            Les codes autres que ceux indiqués ci-dessous doivent être documentés dans l'API.
+
+            Exemple: champ_manquant, invalide.
+        message:
+          type: string
+          description: |
+            Message d'erreur à destination des utilisateurs.
+        codeObjet:
+          type: string
+          description: |
+            Code de l'objet en erreur.
+
+            Utile dans le cas où l'API effectue des traitements sur un ensemble d'objets.
+        champ:
+          type: string
+          description: |
+            Champ optionnel désignant l'attribut en erreur.
+
+            Il est valorisé si l'erreur est dûe à un seul attribut en erreur.
+
+            Cet attribut pourra être utilisé par les applications pour placer le message d'erreur
+            à côté du champ de saisie erronné.
+
+            A noter, cet attribut est fourni en 'best-effort', certaines valeurs ne correpondront
+            pas à un attribut existant. Dans ce cas, ignorer la valeur de cet attribut et placer
+            le message d'erreur en tant que message d'erreur général.
+        messageDetails:
+          type: object
+          properties:
+            arguments:
+              type: object
+              additionalProperties:
+                type: string
+                description: |
+                  Valeurs des arguments du message d'erreur.
+
+                  A titre de debugging.
+
+    Pageable:
+      type: object
+      example:
+        page: 0
+        taille: 10
+        tri: [ ]
+      properties:
+        page:
+          type: integer
+          default: 0
+          description: numéro de page demandée (commence à 0)
+        taille:
+          type: integer
+          default: 10
+          description: |
+            nombre d'élements par page.
+            Si taille = -1, alors l'API retourne tout le contenu répondant aux critères de recherche
+        tri:
+          type: array
+          items:
+            type: string
+          description: critères de tri, chaque tri est de la forme <propriété>[,asc|desc]
+
+    Paging:
+      required:
+        - totalElements
+        - totalPages
+        - taille
+        - page
+      properties:
+        totalElements:
+          type: integer
+          description: |
+            Nombre total de d'enregistrements existants en base
+          format: int64
+        totalPages:
+          type: integer
+          description: |
+            Nombre de pages totales existantes
+        taille:
+          type: integer
+          description: |
+            Nombre d'enregistrements demandés par page
+        page:
+          type: integer
+          description: |
+            Numéro de la page retournée (commence à 0)
+
+    Id:
+      type: string
+      format: uuid
+      description: |
+        Identifiant de ressource
+
+    CodeEspace:
+      type: string
+      pattern: "([A-Z0-9]|-)+"
+      minLength: 3
+      maxLength: 15
+      description: |
+        Code d'un espace
+
+    LibelleEspace:
+      type: string
+      minLength: 4
+      maxLength: 100
+      description: |
+        Libellé d'un espace
+
+    LibelleLongEspace:
+      type: string
+      minLength: 4
+      maxLength: 255
+      description: |
+        Libellé d'un espace
+
+    LibelleAffichageEspace:
+      type: string
+      minLength: 4
+      maxLength: 150
+      description: |
+        Libellé d'un espace
+
+    Code:
+      type: string
+      pattern: "([A-Z0-9]|-)+"
+      minLength: 3
+      maxLength: 30
+      description: |
+        Code d'un objet
+
+    Libelle:
+      type: string
+      maxLength: 50
+      description: |
+        Libellé d'un objet maquette
+
+    LibelleLong:
+      type: string
+      maxLength: 150
+      description: |
+        Libellé long d'un objet maquette
+
+    Description:
+      type: string
+      maxLength: 2000
+      description: |
+        Description d'un objet maquette
+
+    Nomenclature:
+      type: object
+      required:
+        - type
+        - code
+        - dateConsommation
+      properties:
+        type:
+          type: string
+          description: |
+            Type de la nomenclature dans le module REF
+        code:
+          type: string
+          description: |
+            Code de la nomenclature
+            
+            A noter, pour les nomenclature utilisées dans un objetMaquetten la dateConsommation correspondra
+            à la date de début de la période contenant l'objet maquette.
+        dateConsommation:
+          type: string
+          format: date
+          description: |
+            Date consommation de la nomenclature
+            
+    NomenclatureErreurValidation:
+        type: object
+        required:
+          - nomenclatureList
+          - id
+          - codeObjetMaquette
+        properties:
+          nomenclatureList:
+            type: array
+            description: Liste de nomenctaure en erreur sur un objet
+            items:
+              $ref: '#/components/schemas/Nomenclature'
+          id:
+            type: string
+            description: |
+              Id de l'objet Maquette
+          codeObjetMaquette:
+            type: string
+            description: |
+              Code de l'objet Maquette 
+
+    ExporterResponse:
+      type: object
+      required:
+        - base64Encode
+      properties:
+        base64Encode:
+          type: string
+          description: |
+            La maquette encodée en base64
